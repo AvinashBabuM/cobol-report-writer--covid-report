@@ -1,0 +1,133 @@
+       program-id. CTR_ST_CITY_COVID as "com.microfocus.report_writer.CTR_ST_CITY_COVID".
+       ENVIRONMENT DIVISION.
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+           SELECT COVID-FILE ASSIGN TO "F:\amFAM\Report_writer\INPUT-OUTPUT-FILES\CORONA-FILE.DAT"
+           ORGANIZATION IS LINE SEQUENTIAL
+           ACCESS MODE IS SEQUENTIAL.
+           
+           SELECT COVID-REP-FILE ASSIGN TO "F:\amFAM\Report_writer\INPUT-OUTPUT-FILES\CORONA-REP-FILE.DAT"
+           ORGANIZATION IS LINE SEQUENTIAL
+           ACCESS MODE IS SEQUENTIAL.
+
+       DATA DIVISION.
+       FILE SECTION.
+       FD COVID-FILE.
+       01 COVID-REC.
+          05 CASES-ON-DATE  PIC X(10).
+          05 CNT-NAME       PIC X(10).
+          05 STATE-NAME     PIC X(3).
+          05 CITY-NAME      PIC X(4).
+          05 COVID-CASES    PIC 9(5).
+          05 FILLER         PIC X(48) VALUE SPACES.
+          
+       FD COVID-REP-FILE
+          REPORT IS COVID-REPORT.
+           
+       WORKING-STORAGE SECTION.
+       
+       01  WS-COVID-FILE-EOF PIC 9(1) VALUE 0.
+
+       01  WS-CNT-NAME-TEMP      PIC X(10).
+       01  WS-STATE-NAME-TEMP    PIC X(3).
+       01  WS-CITY-NAME-TEMP     PIC X(4).
+       01  WS-TEMP-DATE          PIC X(10).
+       
+       REPORT SECTION.
+       RD COVID-REPORT
+          CONTROLS ARE FINAL,CASES-ON-DATE,CNT-NAME,STATE-NAME
+          PAGE 36 LINES
+          FIRST DETAIL 6.
+       
+       01 TYPE REPORT HEADING.
+          02 LINE IS 1.
+             10 COLUMN 44 PIC X(21) VALUE 'COVID REPORT'.
+        
+       01 TYPE PAGE HEADING.
+          05 LINE IS 2.
+             10 COLUMN 100 PIC X(08) VALUE 'PAGE NO:'.
+             10 COLUMN 109 PIC ZZZ   VALUE PAGE-COUNTER.
+       
+       01 FIELD-HEADER
+          LINE NUMBER IS PLUS 1
+          NEXT GROUP IS PLUS 1
+          TYPE IS CONTROL HEADING CNT-NAME.
+          05 LINE PLUS 1.
+             10 COLUMN 10 PIC X(10) VALUE 'DATE'.
+             10 COLUMN 24 PIC X(10) VALUE 'CNT-NAME'.
+             10 COLUMN 38 PIC X(10) VALUE 'STATE-NAME'. 
+             10 COLUMN 52 PIC X(10) VALUE 'CITY-NAME'.
+             10 COLUMN 66 PIC X(12) VALUE 'COVID-CASES'.
+          
+       01 DETAIL-LINE TYPE IS DETAIL LINE PLUS 1.
+             10 COLUMN 10 PIC X(10)  SOURCE CASES-ON-DATE.
+             10 COLUMN 24 PIC X(10)  SOURCE CNT-NAME.
+             10 COLUMN 38 PIC X(10)  SOURCE STATE-NAME.
+             10 COLUMN 52 PIC X(10)  SOURCE CITY-NAME.
+             10 COLUMN 66 PIC ZZZZZ  SOURCE COVID-CASES.
+             
+      01 STETEGRP
+          TYPE IS CONTROL FOOTING STATE-NAME NEXT GROUP PLUS 2.
+          02 LINE PLUS 2.
+             03 COLUMN 30 PIC X(25)        VALUE 'THE NUMBER OF CASES IN '.
+             03 COLUMN 57 PIC X(4)         SOURCE STATE-NAME.
+             03 COLUMN 63 PIC X(10)        VALUE " STATE IS  ".
+             03 COLUMN 75 PIC ZZZZZZZ      SUM COVID-CASES. 
+             03 COLUMN 85 PIC X(17)        VALUE "IN THE COUNTRY OF ".
+             03 COLUMN 104 PIC X(10)        SOURCE CNT-NAME.
+             03 COLUMN 116 PIC X(10)       VALUE 'ON DATE '.
+             03 COLUMN 128 PIC X(10)       SOURCE CASES-ON-DATE.
+       
+       01 COUNTRYGRP
+          TYPE IS CONTROL FOOTING CNT-NAME NEXT GROUP PLUS 2.
+          02 LINE PLUS 2.
+             03 COLUMN 20 PIC X(40)        VALUE 'THE TOTAL NUMBER OF CASES IN COUNTRY'.
+             03 COLUMN 62 PIC X(10)        SOURCE CNT-NAME.
+             03 COLUMN 74 PIC X(3)         VALUE " IS  ".
+             03 COLUMN 79 PIC ZZZZZZZZ     SUM COVID-CASES. 
+             03 COLUMN 89 PIC X(10)        VALUE 'ON DATE '.
+             03 COLUMN 99 PIC X(10)        SOURCE CASES-ON-DATE.
+             
+       01 DATEGRP
+          TYPE IS CONTROL FOOTING CASES-ON-DATE NEXT GROUP PLUS 2.
+          02 LINE PLUS 2.
+             03 COLUMN 10 PIC X(45)        VALUE 'THE TOTAL NUMBER OF CASES ON DATE '.
+             03 COLUMN 57 PIC X(10)        SOURCE CASES-ON-DATE.
+             03 COLUMN 69 PIC X(3)         VALUE ' IS '.
+             03 COLUMN 75 PIC ZZZZZZZZZ    SUM COVID-CASES.
+             
+       01 TYPE CONTROL FOOTING FINAL LINE PLUS 5.
+         03 COLUMN 10 PIC X(50)       VALUE 'THE TOTAL CASES RAISED ACROSS ALL DATES ARE  '.
+         03 COLUMN 66 PIC ZZZZZZZZZ   SUM COVID-CASES.
+         
+          
+       PROCEDURE DIVISION.
+       OPEN INPUT COVID-FILE, OUTPUT COVID-REP-FILE.
+       INITIATE COVID-REPORT.
+       PERFORM 1000-READ-PARA THRU 1000-EXIT-PARA
+               UNTIL  WS-COVID-FILE-EOF=1.
+       TERMINATE COVID-REPORT.
+       CLOSE COVID-FILE,COVID-REP-FILE.
+       GOBACK.
+     
+       1000-READ-PARA.
+           READ COVID-FILE
+               AT END
+                   MOVE 1 TO WS-COVID-FILE-EOF
+               NOT AT END
+                   IF CASES-ON-DATE IS NOT EQUAL TO WS-TEMP-DATE THEN 
+                       MOVE CASES-ON-DATE TO WS-TEMP-DATE
+                       PERFORM 2000-GEN-PARA THRU 2000-EXIT
+                   ELSE
+                       MOVE CASES-ON-DATE TO WS-TEMP-DATE
+                       PERFORM 2000-GEN-PARA THRU 2000-EXIT
+                   END-IF
+          END-READ.
+       1000-EXIT-PARA.
+           EXIT.
+       2000-GEN-PARA.
+           GENERATE DETAIL-LINE.
+       2000-EXIT.
+           EXIT.
+
+       end program CTR_ST_CITY_COVID.
